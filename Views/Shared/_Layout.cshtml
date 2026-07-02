@@ -1,0 +1,74 @@
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+@{
+    var brand = "Palette";
+    var signedIn = SignInManager.IsSignedIn(User);
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] · @brand</title>
+    <meta name="description" content="Find local artists near you, share a free profile, and plan collabs. By Pulse Apps." />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    <nav class="nav">
+        <div class="container nav-inner">
+            <a class="brand" asp-controller="Home" asp-action="Index">
+                <span class="dot"></span> @brand
+            </a>
+            <div class="nav-links">
+                <a asp-controller="Discover" asp-action="Index">Discover</a>
+                @if (signedIn)
+                {
+                    <a asp-controller="Profile" asp-action="Edit">My profile</a>
+                    <a asp-controller="Collab" asp-action="Inbox">Collabs</a>
+                }
+            </div>
+            <div class="nav-spacer"></div>
+            <div class="nav-actions">
+                @if (signedIn)
+                {
+                    <form asp-controller="Account" asp-action="Logout" method="post">
+                        <button type="submit" class="btn btn-ghost btn-sm">Sign out</button>
+                    </form>
+                }
+                else
+                {
+                    <a class="btn btn-ghost btn-sm" asp-controller="Account" asp-action="Login">Sign in</a>
+                    <a class="btn btn-primary btn-sm" asp-controller="Account" asp-action="Register">Join free</a>
+                }
+            </div>
+        </div>
+    </nav>
+
+    <main class="container">
+        @if (TempData["Saved"] != null)
+        {
+            <div class="alert alert-success" style="margin-top:16px">@TempData["Saved"]</div>
+        }
+        @if (TempData["Error"] != null)
+        {
+            <div class="alert alert-error" style="margin-top:16px">@TempData["Error"]</div>
+        }
+        @RenderBody()
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            @brand — find local artists · a <strong>Pulse Apps</strong> product ·
+            <a asp-controller="Home" asp-action="Privacy">Privacy</a>
+        </div>
+    </footer>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/jquery-validation/dist/jquery.validate.min.js"></script>
+    <script src="~/lib/jquery-validation-unobtrusive/jquery.validate.unobtrusive.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

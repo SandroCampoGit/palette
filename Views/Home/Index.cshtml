@@ -1,0 +1,52 @@
+@{
+    ViewData["Title"] = "Find local artists";
+}
+
+<section class="hero">
+    <span class="eyebrow">◈ Free promo for artists</span>
+    <h1>Get discovered by<br /><span class="grad">local creatives near you.</span></h1>
+    <p class="lede">
+        Palette gives every artist a free, shareable profile — then puts you on the map
+        for people looking to collab. Musicians, photographers, designers, dancers: claim
+        your spot, show your work, get found.
+    </p>
+    <div class="cta-row">
+        <a class="btn btn-primary" asp-controller="Account" asp-action="Register">Claim your free profile</a>
+        <a class="btn" asp-controller="Discover" asp-action="Index">Browse artists</a>
+    </div>
+
+    <svg class="ecg" viewBox="0 0 1400 120" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M0,60 L380,60 L410,60 L430,20 L455,100 L480,40 L505,60 L700,60 L720,60 L740,25 L765,95 L790,45 L815,60 L1100,60 L1130,60 L1150,30 L1175,90 L1200,60 L1400,60" />
+    </svg>
+</section>
+
+<section class="section">
+    <div class="grid-3">
+        <div class="feature">
+            <div class="ic">◎</div>
+            <h3>A profile worth sharing</h3>
+            <p>Portfolio, links and a clean public page at palette/a/your-name. Free forever — drop it in your bio.</p>
+        </div>
+        <div class="feature">
+            <div class="ic">⚲</div>
+            <h3>Found by location</h3>
+            <p>Turn on location and appear for creators searching your city. No GPS? We fall back to your suburb.</p>
+        </div>
+        <div class="feature">
+            <div class="ic">⇄</div>
+            <h3>Plan collabs</h3>
+            <p>Finders send you a collab request. Accept the ones that fit. No noise, no algorithms.</p>
+        </div>
+    </div>
+</section>
+
+<section class="section" style="text-align:center; padding-top:8px">
+    <div class="panel" style="max-width:640px; margin:0 auto">
+        <h3 style="margin:0 0 6px; font-size:20px; letter-spacing:-.02em">Two ways in</h3>
+        <p style="color:var(--muted); margin:0 0 18px">Join as a creator to be found, or as a finder to discover talent.</p>
+        <div class="cta-row" style="justify-content:center">
+            <a class="btn btn-primary" asp-controller="Account" asp-action="Register">Join free</a>
+            <a class="btn" asp-controller="Discover" asp-action="Index">See who's around</a>
+        </div>
+    </div>
+</section>

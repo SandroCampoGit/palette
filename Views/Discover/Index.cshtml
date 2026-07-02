@@ -1,0 +1,108 @@
+@model DiscoverViewModel
+@{ ViewData["Title"] = "Discover artists"; }
+
+<div class="page-head">
+    <div>
+        <h1>Discover local artists</h1>
+        <p class="sub">
+            @if (Model.UsingLocation) { <text>Ranked by distance from you.</text> }
+            else { <text>Turn on location to sort by who's nearest.</text> }
+        </p>
+    </div>
+    <button type="button" class="btn btn-sm" id="near">⚲ Artists near me</button>
+</div>
+
+<form method="get" asp-controller="Discover" asp-action="Index" class="filters" id="filterForm">
+    <select name="discipline" onchange="document.getElementById('filterForm').submit()">
+        <option value="">All disciplines</option>
+        @foreach (var d in Html.GetEnumSelectList<Discipline>())
+        {
+            var sel = Model.DisciplineFilter?.ToString() == d.Value;
+            <option value="@d.Value" selected="@sel">@d.Text</option>
+        }
+    </select>
+    <input type="text" name="city" value="@Model.City" placeholder="City (fallback)" />
+    @if (Model.UsingLocation)
+    {
+        <select name="radiusKm" onchange="document.getElementById('filterForm').submit()">
+            @foreach (var r in new[] { 10, 25, 50, 100, 250 })
+            {
+                <option value="@r" selected="@(Model.RadiusKm == r)">@r km</option>
+            }
+        </select>
+        <input type="hidden" name="lat" value="@Model.Lat" />
+        <input type="hidden" name="lng" value="@Model.Lng" />
+    }
+    <button type="submit" class="btn btn-sm">Filter</button>
+</form>
+
+@if (Model.UsingLocation && Model.Artists.Any(a => a.Latitude != null))
+{
+    <div id="map"
+         data-lat="@Model.Lat" data-lng="@Model.Lng"
+         data-points='@Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+            Model.Artists.Where(a => a.Latitude != null && a.Longitude != null)
+                .Select(a => new { a.ArtistName, a.Slug, lat = a.Latitude, lng = a.Longitude, a.DistanceKm })))'>
+    </div>
+}
+
+@if (Model.Artists.Any())
+{
+    <div class="card-grid">
+        @foreach (var a in Model.Artists)
+        {
+            <a class="card" asp-controller="Artists" asp-action="Details" asp-route-slug="@a.Slug">
+                <div class="cover">
+                    @if (!string.IsNullOrEmpty(a.CoverImageUrl)) { <img src="@a.CoverImageUrl" alt="@a.ArtistName" /> }
+                    else { <span>◈</span> }
+                </div>
+                <div class="body">
+                    <div class="name">@a.ArtistName</div>
+                    <div class="tag">@(a.Tagline ?? a.Discipline.ToString())</div>
+                    <div class="meta">
+                        <span class="chip">@a.Discipline</span>
+                        @if (a.OpenToCollab) { <span class="chip green">Open to collab</span> }
+                        @if (a.DistanceKm != null) { <span>· @a.DistanceKm km</span> }
+                        else if (!string.IsNullOrEmpty(a.City)) { <span>· @a.City</span> }
+                    </div>
+                </div>
+            </a>
+        }
+    </div>
+}
+else
+{
+    <div class="empty">
+        No artists match yet. @if (User.Identity?.IsAuthenticated != true) { <a asp-controller="Account" asp-action="Register">Be the first to join.</a> }
+    </div>
+}
+
+@section Scripts {
+    <script>
+        document.getElementById('near')?.addEventListener('click', function () {
+            if (!navigator.geolocation) return;
+            navigator.geolocation.getCurrentPosition(function (pos) {
+                var u = new URL(window.location.href);
+                u.searchParams.set('lat', pos.coords.latitude.toFixed(6));
+                u.searchParams.set('lng', pos.coords.longitude.toFixed(6));
+                window.location.href = u.toString();
+            });
+        });
+
+        var mapEl = document.getElementById('map');
+        if (mapEl && window.L) {
+            var lat = parseFloat(mapEl.dataset.lat), lng = parseFloat(mapEl.dataset.lng);
+            var map = L.map('map').setView([lat, lng], 11);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                { attribution: '© OpenStreetMap', maxZoom: 19 }).addTo(map);
+            L.circleMarker([lat, lng], { radius: 7, color: '#3ddc97', fillColor: '#3ddc97', fillOpacity: 1 })
+                .addTo(map).bindPopup('You');
+            (JSON.parse(mapEl.dataset.points || '[]')).forEach(function (p) {
+                L.marker([p.lat, p.lng]).addTo(map)
+                    .bindPopup('<strong>' + p.ArtistName + '</strong><br>' +
+                        (p.DistanceKm != null ? p.DistanceKm + ' km · ' : '') +
+                        '<a href="/a/' + p.Slug + '">View profile</a>');
+            });
+        }
+    </script>
+}

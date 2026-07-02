@@ -1,0 +1,70 @@
+@model ArtistProfile
+@inject SignInManager<ApplicationUser> SignInManager
+@{
+    ViewData["Title"] = Model.ArtistName;
+    var initial = string.IsNullOrEmpty(Model.ArtistName) ? "?" : Model.ArtistName.Trim()[..1].ToUpper();
+    var igHandle = Model.Instagram?.TrimStart('@');
+    var igUrl = igHandle is null ? null : $"https://instagram.com/{igHandle}";
+}
+
+<div class="profile-hero">
+    <div class="avatar">@initial</div>
+    <div style="flex:1; min-width:240px">
+        <h1>@Model.ArtistName</h1>
+        <p class="tagline">@(Model.Tagline ?? Model.Discipline.ToString())</p>
+        <div class="meta" style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+            <span class="chip">@Model.Discipline</span>
+            @if (Model.OpenToCollab) { <span class="chip green">Open to collab</span> }
+            @if (!string.IsNullOrEmpty(Model.User?.City)) { <span class="chip grey">@Model.User!.City</span> }
+        </div>
+        <div class="links-row">
+            @if (!string.IsNullOrEmpty(Model.Website)) { <a class="btn btn-sm" href="@Model.Website" target="_blank" rel="noopener">Website</a> }
+            @if (!string.IsNullOrEmpty(igUrl)) { <a class="btn btn-sm" href="@igUrl" target="_blank" rel="noopener">Instagram</a> }
+            @if (!string.IsNullOrEmpty(Model.SoundCloud)) { <a class="btn btn-sm" href="@Model.SoundCloud" target="_blank" rel="noopener">SoundCloud</a> }
+            @if (!string.IsNullOrEmpty(Model.YouTube)) { <a class="btn btn-sm" href="@Model.YouTube" target="_blank" rel="noopener">YouTube</a> }
+        </div>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(Model.Bio))
+{
+    <div class="panel" style="margin-bottom:20px"><p style="margin:0;white-space:pre-line;color:var(--text)">@Model.Bio</p></div>
+}
+
+@if (Model.Portfolio.Any())
+{
+    <div class="page-head" style="margin-top:8px"><h1 style="font-size:20px">Work</h1></div>
+    <div class="gallery">
+        @foreach (var img in Model.Portfolio)
+        {
+            <figure>
+                <img src="@img.Url" alt="@img.Caption" />
+                @if (!string.IsNullOrEmpty(img.Caption)) { <figcaption>@img.Caption</figcaption> }
+            </figure>
+        }
+    </div>
+}
+
+@if (Model.OpenToCollab)
+{
+    <hr class="sep" />
+    <div class="panel">
+        <h3 style="margin:0 0 10px;font-size:18px">Propose a collab</h3>
+        @if (SignInManager.IsSignedIn(User))
+        {
+            <form asp-controller="Collab" asp-action="Request" method="post">
+                <input type="hidden" name="artistProfileId" value="@Model.Id" />
+                <input type="hidden" name="returnSlug" value="@Model.Slug" />
+                <div class="form-row">
+                    <textarea name="message" placeholder="Introduce yourself and what you'd like to work on…" required></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Send collab request</button>
+            </form>
+        }
+        else
+        {
+            <p style="color:var(--muted);margin:0 0 12px">Sign in to send @Model.ArtistName a collab request.</p>
+            <a class="btn btn-primary" asp-controller="Account" asp-action="Login" asp-route-returnUrl="@Url.Action("Details","Artists",new{slug=Model.Slug})">Sign in to collab</a>
+        }
+    </div>
+}

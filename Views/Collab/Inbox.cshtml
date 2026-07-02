@@ -1,0 +1,56 @@
+@model CollabInboxViewModel
+@{ ViewData["Title"] = "Collabs"; }
+
+<div class="page-head"><div><h1>Collabs</h1><p class="sub">Requests you've received and sent.</p></div></div>
+
+<div class="page-head" style="margin:8px 0 12px"><h1 style="font-size:18px">Received</h1></div>
+@if (!Model.HasArtistProfile)
+{
+    <div class="empty">Publish an artist profile to receive collab requests. <a asp-controller="Profile" asp-action="Edit">Set up profile</a></div>
+}
+else if (Model.Received.Any())
+{
+    @foreach (var r in Model.Received)
+    {
+        <div class="panel" style="margin-bottom:12px">
+            <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap">
+                <div>
+                    <strong>@(r.FromUser?.DisplayName ?? "Someone")</strong>
+                    <span class="chip @(r.Status==CollabStatus.Accepted?"green":r.Status==CollabStatus.Declined?"grey":"")" style="margin-left:8px">@r.Status</span>
+                    <p style="color:var(--text);margin:8px 0 0;white-space:pre-line">@r.Message</p>
+                    <p class="field-hint">@r.CreatedAtUtc.ToString("d MMM yyyy") · @r.FromUser?.Email</p>
+                </div>
+                @if (r.Status == CollabStatus.Pending)
+                {
+                    <div style="display:flex;gap:8px;align-items:flex-start">
+                        <form asp-controller="Collab" asp-action="Respond" method="post">
+                            <input type="hidden" name="id" value="@r.Id" /><input type="hidden" name="accept" value="true" />
+                            <button class="btn btn-sm btn-primary" type="submit">Accept</button>
+                        </form>
+                        <form asp-controller="Collab" asp-action="Respond" method="post">
+                            <input type="hidden" name="id" value="@r.Id" /><input type="hidden" name="accept" value="false" />
+                            <button class="btn btn-sm" type="submit">Decline</button>
+                        </form>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+}
+else { <div class="empty">No requests yet.</div> }
+
+<hr class="sep" />
+<div class="page-head" style="margin:8px 0 12px"><h1 style="font-size:18px">Sent</h1></div>
+@if (Model.Sent.Any())
+{
+    @foreach (var r in Model.Sent)
+    {
+        <div class="panel" style="margin-bottom:12px">
+            <strong>To: @(r.ToArtistProfile?.ArtistName ?? "artist")</strong>
+            <span class="chip @(r.Status==CollabStatus.Accepted?"green":r.Status==CollabStatus.Declined?"grey":"")" style="margin-left:8px">@r.Status</span>
+            <p style="color:var(--muted);margin:8px 0 0;white-space:pre-line">@r.Message</p>
+            <p class="field-hint">@r.CreatedAtUtc.ToString("d MMM yyyy")</p>
+        </div>
+    }
+}
+else { <div class="empty">You haven't sent any requests. <a asp-controller="Discover" asp-action="Index">Find someone to collab with.</a></div> }

@@ -1,0 +1,135 @@
+@model ProfileEditViewModel
+@{ ViewData["Title"] = "My profile"; }
+
+<div class="page-head">
+    <div>
+        <h1>Your artist profile</h1>
+        <p class="sub">This is your free promo page. Fill it in, publish, and share the link.</p>
+    </div>
+    @if (!string.IsNullOrEmpty(Model.Slug))
+    {
+        <a class="btn" asp-controller="Artists" asp-action="Details" asp-route-slug="@Model.Slug" target="_blank">View public page ↗</a>
+    }
+</div>
+
+<form asp-controller="Profile" asp-action="Edit" method="post" id="profileForm">
+    <div asp-validation-summary="ModelOnly" class="validation-summary-errors form-row"></div>
+
+    <div class="panel" style="margin-bottom:16px">
+        <div class="form-row two">
+            <div>
+                <label asp-for="ArtistName"></label>
+                <input asp-for="ArtistName" placeholder="Your name or act" />
+                <span asp-validation-for="ArtistName" class="text-danger"></span>
+            </div>
+            <div>
+                <label asp-for="Discipline"></label>
+                <select asp-for="Discipline" asp-items="Html.GetEnumSelectList<Discipline>()"></select>
+            </div>
+        </div>
+        <div class="form-row">
+            <label asp-for="Tagline"></label>
+            <input asp-for="Tagline" placeholder="e.g. Afro-house producer &amp; DJ, open to features" />
+        </div>
+        <div class="form-row">
+            <label asp-for="Bio"></label>
+            <textarea asp-for="Bio" placeholder="A few lines about your work, style, and what you're looking to collab on."></textarea>
+        </div>
+    </div>
+
+    <div class="panel" style="margin-bottom:16px">
+        <label style="margin-bottom:12px">Links</label>
+        <div class="form-row two">
+            <div><label asp-for="Website"></label><input asp-for="Website" placeholder="https://" /></div>
+            <div><label asp-for="Instagram"></label><input asp-for="Instagram" placeholder="@@handle" /></div>
+        </div>
+        <div class="form-row two">
+            <div><label asp-for="SoundCloud"></label><input asp-for="SoundCloud" placeholder="soundcloud.com/…" /></div>
+            <div><label asp-for="YouTube"></label><input asp-for="YouTube" placeholder="youtube.com/@@…" /></div>
+        </div>
+    </div>
+
+    <div class="panel" style="margin-bottom:16px">
+        <label style="margin-bottom:12px">Location — so people nearby can find you</label>
+        <div class="form-row two">
+            <div><label asp-for="City"></label><input asp-for="City" placeholder="Johannesburg" /></div>
+            <div><label asp-for="Suburb"></label><input asp-for="Suburb" placeholder="Parkhurst" /></div>
+        </div>
+        <input type="hidden" asp-for="Latitude" id="lat" />
+        <input type="hidden" asp-for="Longitude" id="lng" />
+        <button type="button" class="btn btn-sm" id="useLocation">⚲ Use my current location</button>
+        <span id="locStatus" class="field-hint" style="margin-left:8px"></span>
+    </div>
+
+    <div class="panel" style="margin-bottom:16px">
+        <div class="form-row check">
+            <input asp-for="OpenToCollab" type="checkbox" />
+            <label asp-for="OpenToCollab">Open to collaboration</label>
+        </div>
+        <div class="form-row check" style="margin-bottom:0">
+            <input asp-for="IsPublished" type="checkbox" />
+            <label asp-for="IsPublished">Publish — make my profile public &amp; discoverable</label>
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Save profile</button>
+</form>
+
+@if (Model.Id != null)
+{
+    <hr class="sep" />
+    <div class="page-head" style="margin-top:0"><div><h1 style="font-size:20px">Portfolio</h1><p class="sub">Up to 5 MB per image.</p></div></div>
+    <div class="panel">
+        <form asp-controller="Profile" asp-action="UploadImage" method="post" enctype="multipart/form-data">
+            <div class="form-row two" style="align-items:end">
+                <div>
+                    <label>Image</label>
+                    <input type="file" name="image" accept="image/*" />
+                </div>
+                <div>
+                    <label>Caption (optional)</label>
+                    <input type="text" name="caption" />
+                </div>
+            </div>
+            <button type="submit" class="btn btn-sm">Add image</button>
+        </form>
+
+        @if (Model.Portfolio.Any())
+        {
+            <div class="thumb-row">
+                @foreach (var img in Model.Portfolio)
+                {
+                    <div class="thumb">
+                        <img src="@img.Url" alt="@img.Caption" />
+                        <form asp-controller="Profile" asp-action="DeleteImage" method="post">
+                            <input type="hidden" name="id" value="@img.Id" />
+                            <button type="submit" class="btn btn-sm btn-danger" title="Remove">✕</button>
+                        </form>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <p class="field-hint" style="margin-top:14px">No images yet — the first one becomes your cover.</p>
+        }
+    </div>
+}
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        document.getElementById('useLocation')?.addEventListener('click', function () {
+            var s = document.getElementById('locStatus');
+            if (!navigator.geolocation) { s.textContent = 'Geolocation not supported.'; return; }
+            s.textContent = 'Locating…';
+            navigator.geolocation.getCurrentPosition(function (pos) {
+                document.getElementById('lat').value = pos.coords.latitude.toFixed(6);
+                document.getElementById('lng').value = pos.coords.longitude.toFixed(6);
+                s.textContent = '✓ Location captured — save to apply.';
+            }, function () {
+                s.textContent = 'Couldn\'t get GPS — your city/suburb will be used instead.';
+            });
+        });
+    </script>
+}
