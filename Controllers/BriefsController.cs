@@ -12,22 +12,18 @@ public class BriefsController : Controller
 {
     private readonly ApplicationDbContext _db;
     private readonly UserManager<ApplicationUser> _users;
-    private readonly IEmailSender _email;
+    private readonly INotificationService _notify;
 
-    public BriefsController(ApplicationDbContext db, UserManager<ApplicationUser> users, IEmailSender email)
+    public BriefsController(ApplicationDbContext db, UserManager<ApplicationUser> users, INotificationService notify)
     {
-        _db = db; _users = users; _email = email;
+        _db = db; _users = users; _notify = notify;
     }
 
-    // Public feed of open opportunities
     [HttpGet]
     public async Task<IActionResult> Index(Discipline? discipline, string? city)
     {
-        var q = _db.Briefs
-            .Include(b => b.PostedBy)
-            .Include(b => b.Responses)
+        var q = _db.Briefs.Include(b => b.PostedBy).Include(b => b.Responses)
             .Where(b => b.Status == BriefStatus.Open);
-
         if (discipline.HasValue) q = q.Where(b => b.Discipline == discipline.Value);
         if (!string.IsNullOrWhiteSpace(city))
             q = q.Where(b => b.City != null && b.City.ToLower().Contains(city.ToLower()));
@@ -53,32 +49,24 @@ public class BriefsController : Controller
         var user = (await _users.GetUserAsync(User))!;
         vm.PostedByUserId = user.Id;
         vm.City ??= user.City;
-        if (vm.NeededBy.HasValue)
-            vm.NeededBy = DateTime.SpecifyKind(vm.NeededBy.Value, DateTimeKind.Utc);
+        if (vm.NeededBy.HasValue) vm.NeededBy = DateTime.SpecifyKind(vm.NeededBy.Value, DateTimeKind.Utc);
 
         _db.Briefs.Add(vm);
         await _db.SaveChangesAsync();
 
-        // Notify matching local artists (same discipline; same city when both known).
-        var matches = await _db.ArtistProfiles
-            .Include(p => p.User)
-            .Where(p => p.IsPublished && p.OpenToCollab && p.Discipline == vm.Discipline
-                        && p.UserId != user.Id)
+        var matches = await _db.ArtistProfiles.Include(p => p.User)
+            .Where(p => p.IsPublished && p.OpenToCollab && p.Discipline == vm.Discipline && p.UserId != user.Id)
             .ToListAsync();
 
-        var briefUrl = Url.Action("Details", "Briefs", new { id = vm.Id }, HttpContext.Request.Scheme);
+        var briefUrl = Url.Action("Details", "Briefs", new { id = vm.Id });
         foreach (var artist in matches.Where(a =>
                      string.IsNullOrWhiteSpace(vm.City) ||
                      string.Equals(a.User?.City, vm.City, StringComparison.OrdinalIgnoreCase)))
         {
-            if (string.IsNullOrEmpty(artist.User?.Email)) continue;
-            await _email.SendAsync(artist.User.Email!,
-                $"New {vm.Discipline} opportunity near you",
-                $"<p>Hi {artist.ArtistName},</p>" +
-                $"<p>A new brief matching your discipline was posted on Palette:</p>" +
-                $"<p><strong>{System.Net.WebUtility.HtmlEncode(vm.Title)}</strong>" +
-                (string.IsNullOrEmpty(vm.Budget) ? "" : $" · {System.Net.WebUtility.HtmlEncode(vm.Budget)}") +
-                $"</p><p><a href=\"{briefUrl}\">View the brief and respond</a></p>");
+            await _notify.NotifyAsync(artist.UserId,
+                $"New {vm.Discipline} brief near you",
+                vm.Title + (string.IsNullOrEmpty(vm.Budget) ? "" : $" · {vm.Budget}"),
+                briefUrl);
         }
 
         TempData["Saved"] = "Brief posted. Matching local artists have been notified.";
@@ -92,14 +80,12 @@ public class BriefsController : Controller
             .Include(b => b.PostedBy)
             .Include(b => b.Responses).ThenInclude(r => r.ArtistProfile)
             .FirstOrDefaultAsync(b => b.Id == id);
-
         if (brief is null) return NotFound();
 
         var userId = _users.GetUserId(User);
         ViewBag.IsOwner = userId != null && brief.PostedByUserId == userId;
         ViewBag.MyProfileId = userId == null ? null :
             (await _db.ArtistProfiles.Where(p => p.UserId == userId).Select(p => (int?)p.Id).FirstOrDefaultAsync());
-
         return View(brief);
     }
 
@@ -110,51 +96,22 @@ public class BriefsController : Controller
     {
         var userId = _users.GetUserId(User)!;
         var profile = await _db.ArtistProfiles.FirstOrDefaultAsync(p => p.UserId == userId && p.IsPublished);
-        if (profile is null)
-        {
-            TempData["Error"] = "Publish an artist profile before responding to briefs.";
-            return RedirectToAction(nameof(Details), new { id = briefId });
-        }
+        if (profile is null) { TempData["Error"] = "Publish an artist profile before responding to briefs."; return RedirectToAction(nameof(Details), new { id = briefId }); }
 
         var brief = await _db.Briefs.Include(b => b.PostedBy)
             .FirstOrDefaultAsync(b => b.Id == briefId && b.Status == BriefStatus.Open);
         if (brief is null) return NotFound();
+        if (brief.PostedByUserId == userId) { TempData["Error"] = "That's your own brief."; return RedirectToAction(nameof(Details), new { id = briefId }); }
+        if (await _db.BriefResponses.AnyAsync(r => r.BriefId == briefId && r.ArtistProfileId == profile.Id)) { TempData["Error"] = "You've already responded to this brief."; return RedirectToAction(nameof(Details), new { id = briefId }); }
+        if (string.IsNullOrWhiteSpace(message)) { TempData["Error"] = "Add a short pitch."; return RedirectToAction(nameof(Details), new { id = briefId }); }
 
-        if (brief.PostedByUserId == userId)
-        {
-            TempData["Error"] = "That's your own brief.";
-            return RedirectToAction(nameof(Details), new { id = briefId });
-        }
-
-        if (await _db.BriefResponses.AnyAsync(r => r.BriefId == briefId && r.ArtistProfileId == profile.Id))
-        {
-            TempData["Error"] = "You've already responded to this brief.";
-            return RedirectToAction(nameof(Details), new { id = briefId });
-        }
-
-        if (string.IsNullOrWhiteSpace(message))
-        {
-            TempData["Error"] = "Add a short pitch.";
-            return RedirectToAction(nameof(Details), new { id = briefId });
-        }
-
-        _db.BriefResponses.Add(new BriefResponse
-        {
-            BriefId = briefId,
-            ArtistProfileId = profile.Id,
-            Message = message.Trim()
-        });
+        _db.BriefResponses.Add(new BriefResponse { BriefId = briefId, ArtistProfileId = profile.Id, Message = message.Trim() });
         await _db.SaveChangesAsync();
 
-        if (!string.IsNullOrEmpty(brief.PostedBy?.Email))
-        {
-            var url = Url.Action("Details", "Briefs", new { id = briefId }, HttpContext.Request.Scheme);
-            await _email.SendAsync(brief.PostedBy.Email!,
-                "An artist responded to your brief",
-                $"<p><strong>{profile.ArtistName}</strong> responded to \"{System.Net.WebUtility.HtmlEncode(brief.Title)}\":</p>" +
-                $"<blockquote>{System.Net.WebUtility.HtmlEncode(message)}</blockquote>" +
-                $"<p><a href=\"{url}\">View responses</a></p>");
-        }
+        await _notify.NotifyAsync(brief.PostedByUserId,
+            "New response to your brief",
+            $"{profile.ArtistName} responded to \"{brief.Title}\".",
+            Url.Action("Details", "Briefs", new { id = briefId }));
 
         TempData["Saved"] = "Response sent to the poster.";
         return RedirectToAction(nameof(Details), new { id = briefId });

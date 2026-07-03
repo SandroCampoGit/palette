@@ -27,6 +27,7 @@
                 {
                     <a asp-controller="Profile" asp-action="Edit">My profile</a>
                     <a asp-controller="Collab" asp-action="Inbox">Collabs</a>
+                    <a asp-controller="Notifications" asp-action="Index" class="notif-link">Alerts @await Component.InvokeAsync("NotificationBadge")</a>
                 }
             </div>
             <div class="nav-spacer"></div>

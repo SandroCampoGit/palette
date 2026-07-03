@@ -1,0 +1,5 @@
+@model int
+@if (Model > 0)
+{
+    <span class="nbadge">@(Model > 9 ? "9+" : Model.ToString())</span>
+}

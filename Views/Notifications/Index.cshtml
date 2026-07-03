@@ -1,0 +1,23 @@
+@model List<Notification>
+@{ ViewData["Title"] = "Notifications"; }
+
+<div class="page-head"><div><h1>Notifications</h1><p class="sub">Collab requests, brief matches and responses land here.</p></div></div>
+
+@if (Model.Any())
+{
+    foreach (var n in Model)
+    {
+        <div class="panel" style="margin-bottom:10px;@(n.IsRead ? "" : "border-left:3px solid var(--accent)")">
+            <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:baseline">
+                <strong>@n.Title</strong>
+                <span class="field-hint">@n.CreatedAtUtc.ToString("d MMM yyyy, HH:mm")</span>
+            </div>
+            @if (!string.IsNullOrEmpty(n.Body)) { <p style="color:var(--muted);margin:6px 0 0">@n.Body</p> }
+            @if (!string.IsNullOrEmpty(n.Url)) { <a class="btn btn-sm" href="@n.Url" style="margin-top:12px">Open →</a> }
+        </div>
+    }
+}
+else
+{
+    <div class="empty">Nothing yet. When someone sends a collab request or matches a brief, it'll show here.</div>
+}

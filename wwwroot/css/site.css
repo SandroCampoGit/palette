@@ -256,3 +256,11 @@ hr.sep { border: none; border-top: 1px solid var(--border); margin: 28px 0; }
   .profile-hero h1 { font-size: 32px; }
   .profile-hero .avatar { width: 96px; height: 96px; font-size: 38px; }
 }
+
+/* ---------- Notification badge ---------- */
+.notif-link { display: inline-flex; align-items: center; gap: 6px; }
+.nbadge {
+  display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px;
+  border-radius: var(--pill); background: var(--accent); color: #000;
+  font-size: 11px; font-weight: 800; line-height: 1;
+}

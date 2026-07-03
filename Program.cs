@@ -55,6 +55,7 @@ if (!string.IsNullOrWhiteSpace(keyPath))
 
 builder.Services.AddScoped<IImageStorage, LocalImageStorage>();
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddControllersWithViews();
 
 var app = builder.Build();

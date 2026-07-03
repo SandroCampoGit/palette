@@ -15,6 +15,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Brief> Briefs => Set<Brief>();
     public DbSet<BriefResponse> BriefResponses => Set<BriefResponse>();
     public DbSet<Endorsement> Endorsements => Set<Endorsement>();
+    public DbSet<Notification> Notifications => Set<Notification>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
@@ -60,12 +61,19 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
              .HasForeignKey(x => x.BriefId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(x => x.ArtistProfile).WithMany()
              .HasForeignKey(x => x.ArtistProfileId).OnDelete(DeleteBehavior.Cascade);
-            e.HasIndex(x => new { x.BriefId, x.ArtistProfileId }).IsUnique(); // one pitch per artist per brief
+            e.HasIndex(x => new { x.BriefId, x.ArtistProfileId }).IsUnique();
+        });
+
+        b.Entity<Notification>(e =>
+        {
+            e.HasOne(x => x.User).WithMany()
+             .HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.UserId, x.IsRead });
         });
 
         b.Entity<Endorsement>(e =>
         {
-            e.HasIndex(x => x.CollabRequestId).IsUnique(); // one endorsement per collab
+            e.HasIndex(x => x.CollabRequestId).IsUnique();
             e.HasOne(x => x.CollabRequest).WithMany()
              .HasForeignKey(x => x.CollabRequestId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(x => x.FromUser).WithMany()
