@@ -104,4 +104,5 @@ public class CollabInboxViewModel
     public List<CollabRequest> Received { get; set; } = new();
     public List<CollabRequest> Sent { get; set; } = new();
     public bool HasArtistProfile { get; set; }
+    public List<int> EndorsedCollabIds { get; set; } = new();
 }

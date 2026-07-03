@@ -3,7 +3,7 @@
 
 <div class="page-head"><div><h1>Collabs</h1><p class="sub">Requests you've received and sent.</p></div></div>
 
-<div class="page-head" style="margin:8px 0 12px"><h1 style="font-size:18px">Received</h1></div>
+<div class="row-head"><h2 style="font-size:19px">Received</h2></div>
 @if (!Model.HasArtistProfile)
 {
     <div class="empty">Publish an artist profile to receive collab requests. <a asp-controller="Profile" asp-action="Edit">Set up profile</a></div>
@@ -16,8 +16,8 @@ else if (Model.Received.Any())
             <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap">
                 <div>
                     <strong>@(r.FromUser?.DisplayName ?? "Someone")</strong>
-                    <span class="chip @(r.Status==CollabStatus.Accepted?"green":r.Status==CollabStatus.Declined?"grey":"")" style="margin-left:8px">@r.Status</span>
-                    <p style="color:var(--text);margin:8px 0 0;white-space:pre-line">@r.Message</p>
+                    <span class="chip @(r.Status==CollabStatus.Accepted?"green":r.Status==CollabStatus.Declined?"grey":"violet")" style="margin-left:8px">@r.Status</span>
+                    <p style="margin:8px 0 0;white-space:pre-line">@r.Message</p>
                     <p class="field-hint">@r.CreatedAtUtc.ToString("d MMM yyyy") · @r.FromUser?.Email</p>
                 </div>
                 @if (r.Status == CollabStatus.Pending)
@@ -40,16 +40,33 @@ else if (Model.Received.Any())
 else { <div class="empty">No requests yet.</div> }
 
 <hr class="sep" />
-<div class="page-head" style="margin:8px 0 12px"><h1 style="font-size:18px">Sent</h1></div>
+<div class="row-head"><h2 style="font-size:19px">Sent</h2></div>
 @if (Model.Sent.Any())
 {
     @foreach (var r in Model.Sent)
     {
         <div class="panel" style="margin-bottom:12px">
             <strong>To: @(r.ToArtistProfile?.ArtistName ?? "artist")</strong>
-            <span class="chip @(r.Status==CollabStatus.Accepted?"green":r.Status==CollabStatus.Declined?"grey":"")" style="margin-left:8px">@r.Status</span>
+            <span class="chip @(r.Status==CollabStatus.Accepted?"green":r.Status==CollabStatus.Declined?"grey":"violet")" style="margin-left:8px">@r.Status</span>
             <p style="color:var(--muted);margin:8px 0 0;white-space:pre-line">@r.Message</p>
             <p class="field-hint">@r.CreatedAtUtc.ToString("d MMM yyyy")</p>
+
+            @if (r.Status == CollabStatus.Accepted && !Model.EndorsedCollabIds.Contains(r.Id))
+            {
+                <hr class="sep" style="margin:14px 0" />
+                <form asp-controller="Collab" asp-action="Endorse" method="post">
+                    <input type="hidden" name="collabRequestId" value="@r.Id" />
+                    <div class="form-row" style="margin-bottom:10px">
+                        <label style="text-transform:none;letter-spacing:0">Worked together? Leave an endorsement — it shows on their public profile.</label>
+                        <input type="text" name="comment" maxlength="500" placeholder="e.g. Shot our whole campaign in a day — professional and fast." />
+                    </div>
+                    <button type="submit" class="btn btn-sm">Endorse @r.ToArtistProfile?.ArtistName</button>
+                </form>
+            }
+            else if (Model.EndorsedCollabIds.Contains(r.Id))
+            {
+                <p class="field-hint" style="color:var(--accent)">✓ Endorsed</p>
+            }
         </div>
     }
 }

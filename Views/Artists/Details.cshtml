@@ -5,15 +5,16 @@
     var initial = string.IsNullOrEmpty(Model.ArtistName) ? "?" : Model.ArtistName.Trim()[..1].ToUpper();
     var igHandle = Model.Instagram?.TrimStart('@');
     var igUrl = igHandle is null ? null : $"https://instagram.com/{igHandle}";
+    var endorsements = ViewBag.Endorsements as List<Endorsement> ?? new List<Endorsement>();
 }
 
 <div class="profile-hero">
     <div class="avatar">@initial</div>
     <div style="flex:1; min-width:240px">
+        <div class="kicker">@Model.Discipline · Verified by collabs: @endorsements.Count</div>
         <h1>@Model.ArtistName</h1>
-        <p class="tagline">@(Model.Tagline ?? Model.Discipline.ToString())</p>
-        <div class="meta" style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-            <span class="chip">@Model.Discipline</span>
+        <p class="tagline">@(Model.Tagline ?? "")</p>
+        <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
             @if (Model.OpenToCollab) { <span class="chip green">Open to collab</span> }
             @if (!string.IsNullOrEmpty(Model.User?.City)) { <span class="chip grey">@Model.User!.City</span> }
         </div>
@@ -28,28 +29,42 @@
 
 @if (!string.IsNullOrWhiteSpace(Model.Bio))
 {
-    <div class="panel" style="margin-bottom:20px"><p style="margin:0;white-space:pre-line;color:var(--text)">@Model.Bio</p></div>
+    <div class="panel" style="margin-bottom:20px"><p style="margin:0;white-space:pre-line">@Model.Bio</p></div>
 }
 
 @if (Model.Portfolio.Any())
 {
-    <div class="page-head" style="margin-top:8px"><h1 style="font-size:20px">Work</h1></div>
+    <div class="row-head"><h2 style="font-size:20px">Work</h2></div>
     <div class="gallery">
         @foreach (var img in Model.Portfolio)
         {
             <figure>
-                <img src="@img.Url" alt="@img.Caption" />
+                <img src="@img.Url" alt="@img.Caption" loading="lazy" />
                 @if (!string.IsNullOrEmpty(img.Caption)) { <figcaption>@img.Caption</figcaption> }
             </figure>
         }
     </div>
 }
 
+@if (endorsements.Any())
+{
+    <hr class="sep" />
+    <div class="row-head"><h2 style="font-size:20px">Endorsements</h2></div>
+    @foreach (var e in endorsements)
+    {
+        <div class="endorsement">
+            <span class="who">@(e.FromUser?.DisplayName ?? "A collaborator")</span>
+            <span class="when">worked with @Model.ArtistName · @e.CreatedAtUtc.ToString("MMM yyyy")</span>
+            <p>@e.Comment</p>
+        </div>
+    }
+}
+
 @if (Model.OpenToCollab)
 {
     <hr class="sep" />
     <div class="panel">
-        <h3 style="margin:0 0 10px;font-size:18px">Propose a collab</h3>
+        <h3 style="margin:0 0 10px;font-size:18px;font-weight:800">Propose a collab</h3>
         @if (SignInManager.IsSignedIn(User))
         {
             <form asp-controller="Collab" asp-action="Request" method="post">

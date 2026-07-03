@@ -118,6 +118,8 @@ public class ProfileController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequestSizeLimit(20_000_000)]
+    [RequestFormLimits(MultipartBodyLengthLimit = 20_000_000)]
     public async Task<IActionResult> UploadImage(IFormFile? image, string? caption)
     {
         var userId = _users.GetUserId(User)!;

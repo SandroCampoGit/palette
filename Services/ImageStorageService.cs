@@ -1,3 +1,7 @@
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Processing;
+
 namespace PulseArtists.Services;
 
 public interface IImageStorage
@@ -7,18 +11,19 @@ public interface IImageStorage
 }
 
 /// <summary>
-/// Saves images to a physical folder served under /uploads.
-/// On Railway the container filesystem is ephemeral, so mount a Volume at the
-/// upload path (see README) or swap this class for an S3/Cloudflare R2 impl.
+/// Accepts uploads up to 15 MB, resizes to max 1600px on the long edge and
+/// re-encodes as JPEG (~quality 82). Phone photos come in at 4–8 MB and leave
+/// at a few hundred KB, so the Railway volume stays small and pages stay fast.
 /// </summary>
 public class LocalImageStorage : IImageStorage
 {
-    private readonly string _root;      // absolute physical folder
-    private readonly string _webPrefix; // e.g. /uploads
+    private readonly string _root;
+    private readonly string _webPrefix;
     private readonly ILogger<LocalImageStorage> _log;
 
-    private static readonly string[] Allowed = { ".jpg", ".jpeg", ".png", ".webp", ".gif" };
-    private const long MaxBytes = 5 * 1024 * 1024; // 5 MB
+    private static readonly string[] Allowed = { ".jpg", ".jpeg", ".png", ".webp", ".gif", ".heic", ".bmp" };
+    public const long MaxBytes = 15 * 1024 * 1024; // 15 MB in
+    private const int MaxEdge = 1600;
 
     public LocalImageStorage(IWebHostEnvironment env, IConfiguration config, ILogger<LocalImageStorage> log)
     {
@@ -34,26 +39,42 @@ public class LocalImageStorage : IImageStorage
     public async Task<string> SaveAsync(IFormFile file, CancellationToken ct = default)
     {
         if (file.Length == 0) throw new InvalidOperationException("Empty file.");
-        if (file.Length > MaxBytes) throw new InvalidOperationException("File exceeds 5 MB limit.");
+        if (file.Length > MaxBytes) throw new InvalidOperationException("Image exceeds the 15 MB limit.");
 
         var ext = Path.GetExtension(file.FileName).ToLowerInvariant();
         if (!Allowed.Contains(ext)) throw new InvalidOperationException("Unsupported image type.");
 
-        var name = $"{Guid.NewGuid():N}{ext}";
+        var name = $"{Guid.NewGuid():N}.jpg";
         var full = Path.Combine(_root, name);
-        await using (var stream = File.Create(full))
+
+        try
         {
-            await file.CopyToAsync(stream, ct);
+            await using var input = file.OpenReadStream();
+            using var image = await Image.LoadAsync(input, ct); // decodes jpg/png/webp/gif/bmp
+
+            if (image.Width > MaxEdge || image.Height > MaxEdge)
+            {
+                image.Mutate(x => x.Resize(new ResizeOptions
+                {
+                    Mode = ResizeMode.Max,
+                    Size = new Size(MaxEdge, MaxEdge)
+                }));
+            }
+
+            await image.SaveAsync(full, new JpegEncoder { Quality = 82 }, ct);
+            return $"{_webPrefix}/{name}";
         }
-        return $"{_webPrefix}/{name}";
+        catch (UnknownImageFormatException)
+        {
+            throw new InvalidOperationException("That file isn't a readable image (iPhone HEIC? Export/share it as JPEG first).");
+        }
     }
 
     public void Delete(string webPath)
     {
         try
         {
-            var name = Path.GetFileName(webPath);
-            var full = Path.Combine(_root, name);
+            var full = Path.Combine(_root, Path.GetFileName(webPath));
             if (File.Exists(full)) File.Delete(full);
         }
         catch (Exception ex)

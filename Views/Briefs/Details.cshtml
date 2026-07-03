@@ -1,0 +1,82 @@
+@model Brief
+@inject SignInManager<ApplicationUser> SignInManager
+@{
+    ViewData["Title"] = Model.Title;
+    bool isOwner = ViewBag.IsOwner == true;
+    int? myProfileId = ViewBag.MyProfileId as int?;
+    bool alreadyResponded = myProfileId != null && Model.Responses.Any(r => r.ArtistProfileId == myProfileId);
+}
+
+<div class="page-head">
+    <div>
+        <h1 style="font-size:26px">@Model.Title</h1>
+        <p class="sub">Posted by @(Model.PostedBy?.DisplayName ?? "someone") · @Model.CreatedAtUtc.ToString("d MMM yyyy")</p>
+    </div>
+    @if (isOwner && Model.Status == BriefStatus.Open)
+    {
+        <form asp-controller="Briefs" asp-action="Close" method="post">
+            <input type="hidden" name="id" value="@Model.Id" />
+            <button type="submit" class="btn btn-sm">Close brief</button>
+        </form>
+    }
+</div>
+
+<div class="panel" style="margin-bottom:18px">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+        <span class="chip violet">@Model.Discipline</span>
+        @if (!string.IsNullOrEmpty(Model.City)) { <span class="chip grey">@Model.City</span> }
+        @if (!string.IsNullOrEmpty(Model.Budget)) { <span class="chip green">@Model.Budget</span> }
+        @if (Model.NeededBy != null) { <span class="chip grey">By @Model.NeededBy.Value.ToString("d MMM yyyy")</span> }
+        @if (Model.Status == BriefStatus.Closed) { <span class="chip">Closed</span> }
+    </div>
+    <p style="margin:0;white-space:pre-line;color:var(--text)">@Model.Description</p>
+</div>
+
+@if (Model.Status == BriefStatus.Open && !isOwner)
+{
+    <div class="panel" style="margin-bottom:18px">
+        <h3 style="margin:0 0 10px;font-size:18px;font-weight:800">Pitch for this</h3>
+        @if (!SignInManager.IsSignedIn(User))
+        {
+            <p style="color:var(--muted);margin:0 0 12px">Sign in with a published artist profile to respond.</p>
+            <a class="btn btn-primary btn-sm" asp-controller="Account" asp-action="Login">Sign in</a>
+        }
+        else if (myProfileId == null)
+        {
+            <p style="color:var(--muted);margin:0 0 12px">You need a published artist profile to respond.</p>
+            <a class="btn btn-primary btn-sm" asp-controller="Profile" asp-action="Edit">Set up your profile</a>
+        }
+        else if (alreadyResponded)
+        {
+            <p style="color:var(--accent);margin:0;font-weight:600">✓ You've responded — the poster has your pitch and profile link.</p>
+        }
+        else
+        {
+            <form asp-controller="Briefs" asp-action="Respond" method="post">
+                <input type="hidden" name="briefId" value="@Model.Id" />
+                <div class="form-row">
+                    <textarea name="message" placeholder="Why you're the right artist for this — keep it short and concrete." required></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Send pitch</button>
+            </form>
+        }
+    </div>
+}
+
+@if (isOwner)
+{
+    <div class="row-head"><h2 style="font-size:20px">Responses (@Model.Responses.Count)</h2></div>
+    @if (Model.Responses.Any())
+    {
+        foreach (var r in Model.Responses.OrderByDescending(x => x.CreatedAtUtc))
+        {
+            <div class="panel" style="margin-bottom:12px">
+                <strong>@r.ArtistProfile?.ArtistName</strong>
+                <span class="chip violet" style="margin-left:8px">@r.ArtistProfile?.Discipline</span>
+                <p style="color:var(--muted);margin:8px 0 10px;white-space:pre-line">@r.Message</p>
+                <a class="btn btn-sm" asp-controller="Artists" asp-action="Details" asp-route-slug="@r.ArtistProfile?.Slug">View profile →</a>
+            </div>
+        }
+    }
+    else { <div class="empty">No responses yet — matching artists were emailed when you posted.</div> }
+}

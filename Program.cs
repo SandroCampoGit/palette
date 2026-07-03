@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.FileProviders;
@@ -12,15 +14,15 @@ var port = Environment.GetEnvironmentVariable("PORT");
 if (!string.IsNullOrEmpty(port))
     builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
-// --- Connection string --------------------------------------------------
-// Railway injects DATABASE_URL as a URI (postgresql://user:pass@host:port/db).
-// Locally we fall back to appsettings "DefaultConnection".
+// --- Upload limits (fix: phone photos are 4–8 MB) ------------------------
+builder.WebHost.ConfigureKestrel(k => k.Limits.MaxRequestBodySize = 25_000_000);
+builder.Services.Configure<FormOptions>(o => o.MultipartBodyLengthLimit = 20_000_000);
+
+// --- Connection string ----------------------------------------------------
 var connectionString = BuildNpgsqlConnectionString(builder.Configuration);
+builder.Services.AddDbContext<ApplicationDbContext>(opt => opt.UseNpgsql(connectionString));
 
-builder.Services.AddDbContext<ApplicationDbContext>(opt =>
-    opt.UseNpgsql(connectionString));
-
-// --- Identity -----------------------------------------------------------
+// --- Identity --------------------------------------------------------------
 builder.Services
     .AddIdentity<ApplicationUser, IdentityRole>(o =>
     {
@@ -41,12 +43,23 @@ builder.Services.ConfigureApplicationCookie(o =>
     o.SlidingExpiration = true;
 });
 
+// --- Data protection: persist login keys so deploys don't log everyone out
+var keyPath = builder.Configuration["DataProtection:KeyPath"];
+if (!string.IsNullOrWhiteSpace(keyPath))
+{
+    Directory.CreateDirectory(keyPath);
+    builder.Services.AddDataProtection()
+        .PersistKeysToFileSystem(new DirectoryInfo(keyPath))
+        .SetApplicationName("PulseArtists");
+}
+
 builder.Services.AddScoped<IImageStorage, LocalImageStorage>();
+builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 builder.Services.AddControllersWithViews();
 
 var app = builder.Build();
 
-// --- Auto-apply migrations on startup (handy for Railway deploys) -------
+// --- Auto-apply migrations on startup --------------------------------------
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
@@ -61,7 +74,6 @@ if (!app.Environment.IsDevelopment())
 
 app.UseStaticFiles();
 
-// Serve uploads from a configurable (possibly volume-mounted) path.
 var uploadPath = app.Configuration["Storage:UploadPath"];
 var webPrefix = app.Configuration["Storage:WebPrefix"] ?? "/uploads";
 if (!string.IsNullOrWhiteSpace(uploadPath))
@@ -84,10 +96,6 @@ app.MapControllerRoute(
 
 app.Run();
 
-
-// -----------------------------------------------------------------------
-// Converts Railway's DATABASE_URL (URI form) into an Npgsql connection
-// string. Falls back to the "DefaultConnection" setting for local dev.
 static string BuildNpgsqlConnectionString(IConfiguration config)
 {
     var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
@@ -97,7 +105,6 @@ static string BuildNpgsqlConnectionString(IConfiguration config)
 
     var uri = new Uri(databaseUrl);
     var userInfo = uri.UserInfo.Split(':', 2);
-    var db = uri.AbsolutePath.TrimStart('/');
 
     var b = new Npgsql.NpgsqlConnectionStringBuilder
     {
@@ -105,7 +112,7 @@ static string BuildNpgsqlConnectionString(IConfiguration config)
         Port = uri.Port > 0 ? uri.Port : 5432,
         Username = Uri.UnescapeDataString(userInfo[0]),
         Password = userInfo.Length > 1 ? Uri.UnescapeDataString(userInfo[1]) : "",
-        Database = db,
+        Database = uri.AbsolutePath.TrimStart('/'),
         SslMode = Npgsql.SslMode.Prefer,
         TrustServerCertificate = true
     };

@@ -11,7 +11,6 @@ public class ArtistsController : Controller
 
     public ArtistsController(ApplicationDbContext db) => _db = db;
 
-    // Public "free promo" page: /a/{slug}
     [HttpGet("{slug}")]
     public async Task<IActionResult> Details(string slug)
     {
@@ -21,6 +20,13 @@ public class ArtistsController : Controller
             .FirstOrDefaultAsync(p => p.Slug == slug && p.IsPublished);
 
         if (profile is null) return NotFound();
+
+        ViewBag.Endorsements = await _db.Endorsements
+            .Include(e => e.FromUser)
+            .Where(e => e.ToArtistProfileId == profile.Id)
+            .OrderByDescending(e => e.CreatedAtUtc)
+            .ToListAsync();
+
         return View(profile);
     }
 }

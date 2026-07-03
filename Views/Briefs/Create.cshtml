@@ -1,0 +1,44 @@
+@model Brief
+@{ ViewData["Title"] = "Post a brief"; }
+
+<div class="auth-wrap" style="max-width:560px">
+    <h1>Post a brief</h1>
+    <p class="sub">Say what you need — matching local artists get notified by email.</p>
+    <div class="panel">
+        <form asp-controller="Briefs" asp-action="Create" method="post">
+            <div asp-validation-summary="ModelOnly" class="validation-summary-errors form-row"></div>
+            <div class="form-row">
+                <label asp-for="Title"></label>
+                <input asp-for="Title" placeholder="e.g. Muralist needed for coffee shop wall, Braamfontein" />
+                <span asp-validation-for="Title" class="text-danger"></span>
+            </div>
+            <div class="form-row">
+                <label asp-for="Description"></label>
+                <textarea asp-for="Description" placeholder="What's the job, the vibe, the timeline, and how to win it."></textarea>
+                <span asp-validation-for="Description" class="text-danger"></span>
+            </div>
+            <div class="form-row two">
+                <div>
+                    <label asp-for="Discipline"></label>
+                    <select asp-for="Discipline" asp-items="Html.GetEnumSelectList<Discipline>()"></select>
+                </div>
+                <div>
+                    <label asp-for="City"></label>
+                    <input asp-for="City" placeholder="Johannesburg" />
+                </div>
+            </div>
+            <div class="form-row two">
+                <div>
+                    <label asp-for="Budget"></label>
+                    <input asp-for="Budget" placeholder="e.g. R5 000 or 'negotiable'" />
+                </div>
+                <div>
+                    <label asp-for="NeededBy"></label>
+                    <input asp-for="NeededBy" type="date" />
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">Post brief</button>
+        </form>
+    </div>
+</div>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

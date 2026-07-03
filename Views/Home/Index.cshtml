@@ -1,49 +1,45 @@
-@{
-    ViewData["Title"] = "Find local artists";
-}
+@{ ViewData["Title"] = "Find local artists"; }
 
 <section class="hero">
-    <span class="eyebrow">◈ Free promo for artists</span>
-    <h1>Get discovered by<br /><span class="grad">local creatives near you.</span></h1>
+    <span class="eyebrow">● Free promo for artists</span>
+    <h1>Your talent.<br /><span class="grad">On the map.</span></h1>
     <p class="lede">
-        Palette gives every artist a free, shareable profile — then puts you on the map
-        for people looking to collab. Musicians, photographers, designers, dancers: claim
-        your spot, show your work, get found.
+        A free, shareable artist page — plus a live feed of local briefs and collabs.
+        Musicians, photographers, designers, dancers: get found by the people
+        looking for exactly you.
     </p>
     <div class="cta-row">
         <a class="btn btn-primary" asp-controller="Account" asp-action="Register">Claim your free profile</a>
         <a class="btn" asp-controller="Discover" asp-action="Index">Browse artists</a>
+        <a class="btn btn-ghost" asp-controller="Briefs" asp-action="Index">See open briefs →</a>
     </div>
-
-    <svg class="ecg" viewBox="0 0 1400 120" preserveAspectRatio="none" aria-hidden="true">
-        <path d="M0,60 L380,60 L410,60 L430,20 L455,100 L480,40 L505,60 L700,60 L720,60 L740,25 L765,95 L790,45 L815,60 L1100,60 L1130,60 L1150,30 L1175,90 L1200,60 L1400,60" />
-    </svg>
 </section>
 
 <section class="section">
+    <div class="row-head"><h2>How it works</h2></div>
     <div class="grid-3">
         <div class="feature">
             <div class="ic">◎</div>
-            <h3>A profile worth sharing</h3>
-            <p>Portfolio, links and a clean public page at palette/a/your-name. Free forever — drop it in your bio.</p>
+            <h3>A page worth sharing</h3>
+            <p>Portfolio, links and endorsements at /a/your-name. Free forever — drop it in your bio instead of a link tree.</p>
         </div>
         <div class="feature">
             <div class="ic">⚲</div>
             <h3>Found by location</h3>
-            <p>Turn on location and appear for creators searching your city. No GPS? We fall back to your suburb.</p>
+            <p>Appear on the map for creators searching your city. GPS if you allow it, your suburb if you don't.</p>
         </div>
         <div class="feature">
             <div class="ic">⇄</div>
-            <h3>Plan collabs</h3>
-            <p>Finders send you a collab request. Accept the ones that fit. No noise, no algorithms.</p>
+            <h3>Real opportunities</h3>
+            <p>Briefs from people who need your discipline, near you, with a budget. Respond in one tap — get hired, get endorsed.</p>
         </div>
     </div>
 </section>
 
-<section class="section" style="text-align:center; padding-top:8px">
-    <div class="panel" style="max-width:640px; margin:0 auto">
-        <h3 style="margin:0 0 6px; font-size:20px; letter-spacing:-.02em">Two ways in</h3>
-        <p style="color:var(--muted); margin:0 0 18px">Join as a creator to be found, or as a finder to discover talent.</p>
+<section class="section" style="text-align:center; padding-top:12px">
+    <div class="panel" style="max-width:640px; margin:0 auto; background:linear-gradient(135deg, rgba(140,103,245,.15), rgba(30,215,96,.1)), var(--surface)">
+        <h3 style="margin:0 0 6px; font-size:22px; letter-spacing:-.02em; font-weight:800">Two ways in</h3>
+        <p style="color:var(--muted); margin:0 0 20px">Join as a creator to be found, or as a finder to discover and book local talent.</p>
         <div class="cta-row" style="justify-content:center">
             <a class="btn btn-primary" asp-controller="Account" asp-action="Register">Join free</a>
             <a class="btn" asp-controller="Discover" asp-action="Index">See who's around</a>
